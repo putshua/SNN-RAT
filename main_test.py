@@ -37,7 +37,6 @@ parser.add_argument('-atk_m','--attack_mode',default='', type=str,help='attack m
 parser.add_argument('-alpha','--alpha',default=2.55/1,type=float,metavar='N',help='pgd attack alpha')
 parser.add_argument('-steps','--steps',default=7,type=int,metavar='N',help='pgd attack steps')
 parser.add_argument('-bb','--bbmodel',default='',type=str,help='black box model') # vgg11_clean_l2[0.000500]bb
-parser.add_argument('-stdout','--stdout',default='',type=str,help='log file')
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.device
@@ -117,10 +116,6 @@ def main():
             atk = attack.PGD(atkmodel, forward_function=ff, eps=args.eps / 255, alpha=args.alpha / 255, steps=args.steps, T=args.time)
         elif args.attack.lower() == 'gn':
             atk = attack.GN(atkmodel, forward_function=ff, eps=args.eps / 255, T=args.time)
-        elif args.attack.lower() == 'rfgsm':
-            atk = attack.RFGSM(atkmodel, forward_function=ff, eps=args.eps / 255, T=args.time)
-        elif args.attack.lower() == 'bim':
-            atk = attack.BIM(atkmodel, forward_function=ff, eps=args.eps / 255, alpha=args.alpha / 255, steps=args.steps, T=args.time)
         else:
             atk = None
         
@@ -132,11 +127,4 @@ def main():
         logger.info(json.dumps(atk_config)+' Test acc={:.3f}'.format(acc))
 
 if __name__ == "__main__":
-    if len(args.stdout) != 0:
-        fp = open(args.stdout, 'a')
-        sys.stdout = fp
-
     main()
-
-    if len(args.stdout) != 0:
-        fp.close()

@@ -35,7 +35,7 @@ parser.add_argument('-special','--special', default='l2', type=str, help='[reg, 
 parser.add_argument('-beta','--beta',default=5e-4, type=float,help='regulation beta')
 parser.add_argument('-atk','--attack',default='', type=str,help='attack')
 parser.add_argument('-eps','--eps',default=2, type=float, metavar='N',help='attack eps')
-parser.add_argument('-atk_m','--attack_mode',default='', type=str,help='attack mode')
+parser.add_argument('-atk_m','--attack_mode',default='', type=str,help='[bptt, bptr, '']')
 
 # only PGD
 parser.add_argument('-alpha','--alpha',default=1, type=float, metavar='N', help='pgd attack alpha')
