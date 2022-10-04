@@ -3,7 +3,7 @@ import os
 import sys
 from models.VGG import *
 import data_loaders
-from functions import seed_all, BPTT_attack, RateBP_attack, Act_attack, get_logger
+from functions import *
 from utils import val
 from models import *
 import attack
@@ -11,7 +11,7 @@ import copy
 import torch
 import json
 
-parser = argparse.ArgumentParser(description='PyTorch Temporal Efficient Training')
+parser = argparse.ArgumentParser()
 # just use default setting
 parser.add_argument('-j','--workers',default=4, type=int,metavar='N',help='number of data loading workers')
 parser.add_argument('-b','--batch_size',default=64, type=int,metavar='N',help='mini-batch size')
@@ -55,8 +55,7 @@ def main():
         num_labels = 10
 
     log_dir = '%s-results'% (args.dataset)
-    #>>>>>>>>>>>>IMPORTANT<<<<<<<<<<<<<<<<<
-#     log_dir = '/model'
+
     model_dir = '%s-checkpoints'% (args.dataset)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -108,7 +107,7 @@ def main():
         if args.attack_mode == 'bptt':
             ff = BPTT_attack
         elif 'rate' in args.attack_mode:
-            ff = RateBP_attack
+            ff = BPTR_attack
         else:
             ff = Act_attack
 

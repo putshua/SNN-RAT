@@ -97,7 +97,7 @@ class LIFSpike(nn.Module):
         self.T = T
 
     def forward(self, x):
-        if self.mode == 'rate' and self.T > 0:
+        if self.mode == 'bptr' and self.T > 0:
             x = self.expand(x)
             x = self.ratebp(x)
             x = self.merge(x)

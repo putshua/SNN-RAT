@@ -5,19 +5,19 @@ import warnings
 import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
-import data_loaders
-from functions import seed_all, get_logger, RateBP_attack, BPTT_attack
+from data_loaders import cifar10
+from functions import *
 import attack
 from models import *
 from models.VGG import VGG_woBN
 from utils import train, val
 
-parser = argparse.ArgumentParser(description='PyTorch Training')
+parser = argparse.ArgumentParser()
 # just use default setting
 parser.add_argument('-j','--workers',default=8, type=int,metavar='N',help='number of data loading workers')
 parser.add_argument('-b','--batch_size',default=64, type=int,metavar='N',help='mini-batch size')
 parser.add_argument('--seed',default=42,type=int,help='seed for initializing training. ')
-parser.add_argument('--optim', default='sgd',type=str,help='model')
+parser.add_argument('--optim', default='sgd',type=str,help='optimizer')
 parser.add_argument('-suffix','--suffix',default='', type=str,help='suffix')
 
 # model configuration
@@ -31,7 +31,7 @@ parser.add_argument('-lr','--lr',default=0.1,type=float,metavar='LR', help='init
 parser.add_argument('-dev','--device',default='0',type=str,help='device')
 
 # adv training configuration
-parser.add_argument('-special','--special', default='l2', type=str, help='[parseval, l2]')
+parser.add_argument('-special','--special', default='l2', type=str, help='[reg, l2]')
 parser.add_argument('-beta','--beta',default=5e-4, type=float,help='regulation beta')
 parser.add_argument('-atk','--attack',default='', type=str,help='attack')
 parser.add_argument('-eps','--eps',default=2, type=float, metavar='N',help='attack eps')
@@ -49,24 +49,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main():
     global args
     if args.dataset.lower() == 'cifar10':
-        use_cifar10 = True
         num_labels = 10
-    elif args.dataset.lower() == 'cifar100':
-        use_cifar10 = False
-        num_labels = 100
-    elif args.dataset.lower() == 'svhn':
-        num_labels = 10
+        train_dataset, val_dataset, znorm = cifar10()
 
-    #>>>>>>>IMPORTANT<<<<<<<< Edit log_dir 
     log_dir = '%s-checkpoints'% (args.dataset)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
     seed_all(args.seed)
-    if 'cifar' in args.dataset.lower():
-        train_dataset, val_dataset, znorm = data_loaders.build_cifar(use_cifar10=use_cifar10)
-    elif args.dataset.lower() == 'svhn':
-        train_dataset, val_dataset, znorm = data_loaders.build_svhn()
+
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.workers, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size,
@@ -86,8 +77,8 @@ def main():
 
     if args.attack_mode == 'bptt':
         ff = BPTT_attack
-    elif 'rate' in args.attack_mode:
-        ff = RateBP_attack
+    elif args.attack_mode == 'bptr':
+        ff = BPTR_attack
     else:
         ff = None
 
@@ -114,7 +105,6 @@ def main():
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     best_acc = 0
 
-    # IMPORTANT<<<<<<<<<<<<< modifed
     identifier = args.model
     if atk is not None:
         identifier += '_%s[%f][%s]' %(atk.__class__.__name__, atk.eps, args.attack_mode)
@@ -124,13 +114,11 @@ def main():
     identifier += '_%s[%f]'%(args.special, args.beta)
     identifier += args.suffix
 
-    parseval = (args.special == 'parseval')
-
     logger = get_logger(os.path.join(log_dir, '%s.log'%(identifier)))
     logger.info('start training!')
     
     for epoch in range(args.epochs):
-        loss, acc = train(model, device, train_loader, criterion, optimizer, args.time, atk=atk, beta=args.beta, parseval=parseval)
+        loss, acc = train(model, device, train_loader, criterion, optimizer, args.time, atk=atk, beta=args.beta, parseval=(args.special == 'reg'))
         logger.info('Epoch:[{}/{}]\t loss={:.5f}\t acc={:.3f}'.format(epoch , args.epochs, loss, acc))
         scheduler.step()
         tmp = val(model, test_loader, device, args.time)
